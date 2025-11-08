@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab Report interpreter</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+    --primary: #fa2600;
+    --secondary: #265a62;
+    --normal-color: #28a745;
+    --low-color: #ffc107;
+    --high-color: #dc3545;
+    --attention-color: #fd7e14;
+    --critical-color: #721c24;
+    --bg-light: #f0f2f5;
+}
+
+body {
+    background: var(--bg-light);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding-bottom: 2rem;
+}
+
+.header {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: rgb(213, 203, 203);
+    padding: 2rem 0;
+    border-radius: 0 0 25px 25px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    text-align: center;
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    animation: fadeInDown 1s;
+}
+
+.header p {
+    font-size: 1.1rem;
+    animation: fadeIn 2s;
+}
+
+@keyframes fadeInDown {
+    0% { opacity:0; transform: translateY(-20px);}
+    100% { opacity:1; transform: translateY(0);}
+}
+
+@keyframes fadeIn {
+    0% { opacity:0;}
+    100% { opacity:1;}
+}
+
+.card {
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    margin-bottom: 25px;
+    transition: transform 0.3s, box-shadow 0.3s;
+    background: white;
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+
+.upload-area {
+    border: 3px dashed #6c757d;
+    border-radius: 15px;
+    padding: 3rem;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(248,249,250,0.7);
+    transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+    border-color: var(--primary);
+    background: #e1e7ff;
+    transform: scale(1.02);
+}
+
+.upload-icon {
+    font-size: 5rem;
+    color: var(--primary);
+    margin-bottom: 1.5rem;
+    animation: bounce 1.5s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0);}
+    50% { transform: translateY(-10px);}
+}
+
+.status-badge {
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-weight: 600;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1);}
+    50% { transform: scale(1.05);}
+    100% { transform: scale(1);}
+}
+
+.normal { background: rgba(40,167,69,0.15); color: var(--normal-color);}
+.low { background: rgba(255,193,7,0.15); color: var(--low-color);}
+.high { background: rgba(220,53,69,0.15); color: var(--high-color);}
+.attention { background: rgba(253,126,20,0.15); color: var(--attention-color);}
+.critical { background: rgba(220,53,69,0.2); color: var(--critical-color);}
+
+.btn-primary, .btn-download {
+    background: linear-gradient(45deg, var(--primary), var(--secondary));
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover, .btn-download:hover {
+    background: linear-gradient(45deg, var(--secondary), var(--primary));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.result-table th {
+    background: linear-gradient(45deg, var(--primary), var(--secondary));
+    color: white;
+}
+
+.doctor-notes {
+    background: #fff4e6;
+    border-left: 5px solid var(--attention-color);
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.feature-list li:before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--primary);
+    font-weight: bold;
+}
+
+.sample-report {
+    background: linear-gradient(120deg,#f6d365,#fda085);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.sample-report:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+}
+
+/* Flash Messages */
+.flash-message {
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    transition: transform 0.3s, opacity 0.3s;
+}
+.flash-message.show { transform: translateX(0); opacity:1; }
+.flash-success { background: #d4edda; border-left: 6px solid var(--normal-color);}
+.flash-error { background: #f8d7da; border-left: 6px solid var(--high-color);}
+.flash-warning { background: #fff3cd; border-left: 6px solid var(--attention-color);}
+.flash-info { background: #d1ecf1; border-left: 6px solid var(--primary);}
+</style>
+</head>
+<body>
+
+<!-- Flash container -->
+<div id="flash-container"></div>
+
+<!-- Header -->
+<div class="header">
+    <h1><i class="fas fa-file-medical-alt"></i>Ai Lab Report Interpreter</h1>
+    <p>Upload your lab report and get instant analysis with interactive color-coded results!</p>
+</div>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Upload Card -->
+            <div class="card">
+                <div class="card-header text-white bg-primary">
+                    <i class="fas fa-upload"></i> Upload Lab Report
+                </div>
+                <div class="card-body">
+                    <div id="upload-area" class="upload-area">
+                        <div class="upload-icon"><i class="fas fa-file-pdf"></i></div>
+                        <h4>Drag & Drop your PDF</h4>
+                        <p class="text-muted">Supports text or scanned PDFs</p>
+                        <button class="btn btn-primary mt-3" id="select-file-btn"><i class="fas fa-file-import"></i> Select File</button>
+                        <input type="file" id="file-input" accept=".pdf" style="display:none;">
+                        
+                        <!-- <div class="sample-reports mt-3">
+                            <div class="sample-report" data-sample="normal">Normal</div>
+                            <div class="sample-report" data-sample="abnormal">Abnormal</div>
+                            <div class="sample-report" data-sample="critical">Critical</div>
+                        </div> -->
+                    </div>
+                    <div id="upload-progress" class="mt-3" style="display:none;">
+                        <div class="d-flex justify-content-between"><span>Processing...</span><span id="progress-percentage">0%</span></div>
+                        <div class="progress mt-2" style="height: 10px;">
+                            <div id="progress-bar" class="progress-bar" role="progressbar" style="width:0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <!-- Features Card -->
+            <div class="card">
+                <div class="card-header text-white bg-success"><i class="fas fa-check-circle"></i> Features</div>
+                <div class="card-body">
+                    <ul class="feature-list position-relative ps-4">
+                        <li>Auto-extract lab values</li>
+                        <li>Flag Low / Normal / High</li>
+                        <li>Color-coded results</li>
+                        <li>Doctor's notes</li>
+                        <li>Downloadable PDF</li>
+                        <li>Interactive charts & progress</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="results-section" style="display:none;" class="mt-4">
+        <div class="card">
+            <div class="card-header bg-gradient text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(45deg,var(--primary),var(--secondary));">
+                <span><i class="fas fa-chart-line"></i> Analysis Results</span>
+                <button id="download-btn" class="btn btn-download btn-sm"><i class="fas fa-download"></i> Download</button>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h4>Overall Health Status</h4>
+                        <span id="health-status" class="status-badge normal"></span>
+                        <p id="health-summary" class="mt-2"></p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <h4>Lab Values Analysis</h4>
+                        <div class="table-responsive">
+                            <table class="table table-hover result-table">
+                                <thead>
+                                    <tr>
+                                        <th>Test</th>
+                                        <th>Value</th>
+                                        <th>Range</th>
+                                        <th>Status</th>
+                                        <th>Analysis</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="doctor-notes mt-3">
+                    <div id="doctors-notes-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const selectFileBtn = document.getElementById('select-file-btn');
+        const uploadProgress = document.getElementById('upload-progress');
+        const progressBar = document.getElementById('progress-bar');
+        const progressPercentage = document.getElementById('progress-percentage');
+        const resultsSection = document.getElementById('results-section');
+        const resultsTableBody = document.getElementById('results-table-body');
+        const healthStatus = document.getElementById('health-status');
+        const healthSummary = document.getElementById('health-summary');
+        const doctorsNotesContent = document.getElementById('doctors-notes-content');
+
+        function showFlash(message, type='success', duration=4000) {
+            const flash = document.createElement('div');
+            flash.className = `flash-message flash-${type}`;
+            flash.textContent = message;
+            document.body.appendChild(flash);
+            setTimeout(() => flash.classList.add('show'), 50);
+            setTimeout(() => {
+                flash.classList.remove('show');
+                setTimeout(() => flash.remove(), 300);
+            }, duration);
+        }
+
+        selectFileBtn.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+        uploadArea.addEventListener('dragleave', e => { e.preventDefault(); uploadArea.classList.remove('dragover'); });
+        uploadArea.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', () => { if (fileInput.files.length) processFile(fileInput.files[0]); });
+
+        function processFile(file) {
+            if (file.type !== 'application/pdf') { showFlash('Please upload a PDF file.', 'error'); return; }
+
+            showFlash('Uploading and processing your lab report...', 'info');
+            uploadProgress.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressPercentage.textContent = '0%';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/upload', true);
+
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                    progressPercentage.textContent = percentComplete + '%';
+                }
+            };
+
+            xhr.onload = function() {
+                uploadProgress.style.display = 'none';
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.results) {
+                        populateResults(response.results);
+                        resultsSection.style.display = 'block';
+                        resultsSection.scrollIntoView({ behavior: 'smooth' });
+                        showFlash('Analysis completed successfully!', 'success');
+                    } else if (response.error) showFlash(response.error, 'error');
+                } else showFlash('Error uploading file.', 'error');
+            };
+
+            xhr.send(formData);
+        }
+
+        function populateResults(results) {
+            resultsTableBody.innerHTML = '';
+            let overallStatus = 'Normal';
+
+            results.forEach(item => {
+                let statusClass = '', statusIcon = '';
+
+                if (item.status === 'Normal') { statusClass='normal'; statusIcon='<i class="fas fa-check-circle flag-icon"></i>'; }
+                else if (item.status === 'Low') { statusClass='low'; statusIcon='<i class="fas fa-arrow-down flag-icon"></i>'; overallStatus='Attention'; }
+                else if (item.status === 'High') { statusClass='high'; statusIcon='<i class="fas fa-arrow-up flag-icon"></i>'; overallStatus='Attention'; }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.test}</td>
+                    <td>${item.value}</td>
+                    <td>${item.range}</td>
+                    <td class="${statusClass}">${statusIcon} ${item.status}</td>
+                    <td><span>${item.analysis || ''}</span></td>
+                `;
+                resultsTableBody.appendChild(row);
+            });
+
+            healthStatus.textContent = overallStatus;
+            healthStatus.className = overallStatus==='Normal'?'status-healthy status-badge':'status-attention status-badge';
+            healthSummary.textContent = 'Summary generated by AI based on your lab report.';
+            doctorsNotesContent.textContent = 'Doctor notes generated by AI based on analysis.';
+            document.getElementById('download-btn').onclick = generatePDF;
+        }
+
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(16);
+            doc.text("Lab Report Analysis", 14, 20);
+            doc.setFontSize(12);
+            doc.text("Overall Health Status: " + healthStatus.textContent, 14, 30);
+            doc.text("Summary: " + healthSummary.textContent, 14, 38);
+            let y = 48;
+            resultsTableBody.querySelectorAll('tr').forEach((row, idx) => {
+                const cells = Array.from(row.querySelectorAll('td')).map(c => c.textContent);
+                doc.text(`${cells[0]} | ${cells[1]} | ${cells[2]} | ${cells[3]} | ${cells[4]}`, 14, y + idx * 8);
+            });
+            y += resultsTableBody.rows.length * 8 + 10;
+            doc.text("Doctor's Notes: " + doctorsNotesContent.textContent, 14, y);
+            doc.save('Lab_Report_Analysis.pdf');
+        }
+    </script>
+
+</body>
+</html>
